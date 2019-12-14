@@ -1,0 +1,43 @@
+#!/bin/bash
+
+#$1: movie folder to be organized 
+#$2: movie folder where the organized movies should be put
+
+#main file of BDMV normally very large, set it properly.
+BDMV_SIZE=12G
+#set size properly, because some movies with sample, whihc is normlly below 200M
+OTHER_MOVIE_SIZE=200M
+
+if [[ ! -d "$2" ]]
+then
+    echo "[$2] directory does not exist, exit..."
+    exit
+fi
+
+find "$1" -type f -size "+${OTHER_MOVIE_SIZE}"  > /tmp/movie_list$$
+movie_count=$(find "$1" -type f -size "+${OTHER_MOVIE_SIZE}" | wc -l) 
+
+count=1
+while [[ $count -le $movie_count ]]
+do
+    indi_movie=$(sed -n "${count}p" /tmp/movie_list$$)
+    movie_ext=$(echo "$indi_movie" | gawk -F"\." '{print $NF}')
+    if [[ $movie_ext == "m2ts" ]]
+    then
+        bdmv_folder=$(echo "${indi_movie%BDMV*.m2ts}")
+        mv "$bdmv_folder" "$2" 
+	((count++))
+    elif [[ $movie_ext == "ssif" ]]
+    then
+        bdmv_folder=$(echo "${indi_movie%BDMV*.ssif}")
+        mv "$bdmv_folder" "$2" 
+	((count++))
+    else
+       pre_folder_name=$(basename "$indi_movie")
+       set "$1" "${2%/}"
+       mkdir  "$2/${pre_folder_name%.$movie_ext}"
+       link "$indi_movie" "$2/${pre_folder_name%.$movie_ext}/${pre_folder_name}"
+       ((count++))
+    fi
+
+done
